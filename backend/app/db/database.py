@@ -1,5 +1,5 @@
 """
-数据库连接管理
+数据库连接管理 (支持SQLite用于测试)
 """
 from typing import AsyncGenerator
 
@@ -8,11 +8,19 @@ from sqlalchemy.orm import declarative_base
 
 from app.core.config import settings
 
+# 判断使用哪种数据库
+if settings.USE_SQLITE:
+    # SQLite (用于测试)
+    DATABASE_URL = "sqlite+aiosqlite:///./xianyu_saas.db"
+else:
+    # PostgreSQL (生产环境)
+    DATABASE_URL = settings.DATABASE_URL
+
 # 创建异步引擎
 engine = create_async_engine(
-    settings.DATABASE_URL,
+    DATABASE_URL,
     echo=settings.DEBUG,
-    pool_size=20,
+    pool_size=20 if not settings.USE_SQLITE else 5,
     max_overflow=0,
     pool_pre_ping=True,
 )

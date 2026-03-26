@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     
     # 数据库
+    USE_SQLITE: bool = False
     DATABASE_URL: str = "postgresql+asyncpg://xianyu:xianyu2026@localhost:5432/xianyu_saas"
     REDIS_URL: str = "redis://localhost:6379/0"
     

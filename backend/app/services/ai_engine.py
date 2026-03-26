@@ -185,10 +185,19 @@ class AIReplyEngine:
         default_prompt: Optional[str] = None,
     ):
         # OpenAI客户端
-        self.client = AsyncOpenAI(
-            api_key=api_key or os.getenv("LLM_API_KEY"),
-            base_url=base_url or os.getenv("LLM_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
-        )
+        api_key = api_key or os.getenv("LLM_API_KEY")
+        
+        if api_key:
+            self.client = AsyncOpenAI(
+                api_key=api_key,
+                base_url=base_url or os.getenv("LLM_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
+            )
+            self.enabled = True
+        else:
+            logger.warning("LLM API Key未配置，AI客服功能已禁用")
+            self.client = None
+            self.enabled = False
+        
         self.model = model or os.getenv("LLM_MODEL", "qwen-turbo")
         
         # 提示词
@@ -245,6 +254,11 @@ class AIReplyEngine:
         Returns:
             回复内容，如果无需回复则返回None
         """
+        # 检查AI是否启用
+        if not self.enabled or not self.client:
+            logger.warning("AI客服未启用，无法生成回复")
+            return None
+        
         # 格式化历史
         context = self._format_history(conversation_history)
         

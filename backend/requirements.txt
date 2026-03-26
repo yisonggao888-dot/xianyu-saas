@@ -8,6 +8,7 @@ asyncpg==0.30.0
 sqlalchemy[asyncio]==2.0.38
 alembic==1.14.1
 redis==5.2.1
+aiosqlite==0.21.0  # SQLite异步支持
 
 # 认证
 python-jose[cryptography]==3.4.0
