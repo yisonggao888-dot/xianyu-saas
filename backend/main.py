@@ -19,9 +19,16 @@ async def lifespan(app: FastAPI):
     await init_db()
     logger.info("Database initialized")
     
+    # 启动活跃账号
+    await init_active_accounts()
+    
     yield
     
     # 关闭时
+    from app.services.account_manager import get_account_manager
+    manager = get_account_manager()
+    await manager.stop_all()
+    
     await close_db()
     logger.info("Database connection closed")
 
@@ -61,16 +68,47 @@ async def root():
 
 
 # 注册API路由
-from app.api import auth, users, accounts
+from app.api import auth, users, accounts, conversations
 
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["认证"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["用户"])
 app.include_router(accounts.router, prefix="/api/v1/accounts", tags=["闲鱼账号"])
+app.include_router(conversations.router, prefix="/api/v1/conversations", tags=["对话"])
 # TODO: 后续添加
-# from app.api import conversations, products, orders
-# app.include_router(conversations.router, prefix="/api/v1/conversations", tags=["对话"])
+# from app.api import products, orders
 # app.include_router(products.router, prefix="/api/v1/products", tags=["选品"])
 # app.include_router(orders.router, prefix="/api/v1/orders", tags=["订单"])
+
+
+# ========== 启动时初始化 ==========
+
+async def init_active_accounts():
+    """启动时连接所有启用的账号"""
+    from sqlalchemy import select
+    from app.db.database import AsyncSessionLocal
+    from app.models.models import Account, AccountStatus
+    from app.core.security import decrypt_cookie
+    from app.services.account_manager import get_account_manager
+    
+    logger.info("初始化活跃账号连接...")
+    
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            select(Account).where(Account.status == AccountStatus.ACTIVE)
+        )
+        accounts = result.scalars().all()
+        
+        manager = get_account_manager()
+        
+        for account in accounts:
+            try:
+                cookies = decrypt_cookie(account.cookies)
+                await manager.start_account(account.id, cookies)
+                logger.info(f"账号 {account.id} 已启动")
+            except Exception as e:
+                logger.error(f"启动账号 {account.id} 失败: {e}")
+    
+    logger.info(f"已启动 {len(accounts)} 个账号")
 
 
 if __name__ == "__main__":
