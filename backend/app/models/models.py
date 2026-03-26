@@ -44,6 +44,20 @@ class ConversationStatus(str, PyEnum):
     MANUAL = "manual"  # 人工接管
 
 
+class ProductStatus(str, PyEnum):
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    DELETED = "deleted"
+
+
+class OrderStatus(str, PyEnum):
+    PENDING = "pending"
+    PAID = "paid"
+    SHIPPED = "shipped"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
+
 # ========== 租户模型 ==========
 
 class Tenant(Base):
@@ -214,16 +228,16 @@ class Product(Base):
     
     # 价格
     cost_price: Mapped[float] = mapped_column(Float, nullable=False)  # 成本价
-    suggested_price: Mapped[float] = mapped_column(Float, nullable=False)  # 建议售价
-    profit_margin: Mapped[float] = mapped_column(Float, nullable=False)  # 利润率
+    sale_price: Mapped[float] = mapped_column(Float, nullable=False)  # 售价
+    main_image: Mapped[str] = mapped_column(Text, nullable=False)
+    detail_url: Mapped[str] = mapped_column(Text, nullable=False)
     
     # 销量数据
     monthly_sales: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     source_rating: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     
     # 状态
-    is_favorite: Mapped[bool] = mapped_column(Boolean, default=False)
-    is_listed: Mapped[bool] = mapped_column(Boolean, default=False)
+    status: Mapped[ProductStatus] = mapped_column(Enum(ProductStatus), default=ProductStatus.ACTIVE)
     
     # 时间戳
     created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
@@ -250,7 +264,7 @@ class Order(Base):
     profit: Mapped[float] = mapped_column(Float, nullable=False)
     
     # 状态
-    status: Mapped[str] = mapped_column(String(20), default="pending")  # pending/paid/shipped/completed/cancelled
+    status: Mapped[OrderStatus] = mapped_column(Enum(OrderStatus), default=OrderStatus.PENDING)
     
     # 货源信息
     source_platform: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
