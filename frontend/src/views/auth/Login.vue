@@ -2,8 +2,11 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { useUserStore } from '@/stores/user'
+import { Message, Lock } from '@element-plus/icons-vue'
 
 const router = useRouter()
+const userStore = useUserStore()
 const loading = ref(false)
 const formRef = ref()
 
@@ -29,16 +32,11 @@ const handleLogin = async () => {
   
   loading.value = true
   try {
-    // TODO: 调用登录API
-    // const { data } = await login(form)
-    // localStorage.setItem('token', data.access_token)
-    
-    // 模拟登录成功
-    localStorage.setItem('token', 'mock_token')
+    await userStore.login(form.email, form.password)
     ElMessage.success('登录成功')
     router.push('/')
   } catch (error) {
-    ElMessage.error('登录失败')
+    // 错误已在拦截器处理
   } finally {
     loading.value = false
   }

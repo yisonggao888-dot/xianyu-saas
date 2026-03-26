@@ -60,11 +60,14 @@ async def root():
     }
 
 
-# TODO: 注册API路由
-# from app.api import auth, users, accounts, conversations, products, orders
-# app.include_router(auth.router, prefix="/api/v1/auth", tags=["认证"])
-# app.include_router(users.router, prefix="/api/v1/users", tags=["用户"])
-# app.include_router(accounts.router, prefix="/api/v1/accounts", tags=["闲鱼账号"])
+# 注册API路由
+from app.api import auth, users, accounts
+
+app.include_router(auth.router, prefix="/api/v1/auth", tags=["认证"])
+app.include_router(users.router, prefix="/api/v1/users", tags=["用户"])
+app.include_router(accounts.router, prefix="/api/v1/accounts", tags=["闲鱼账号"])
+# TODO: 后续添加
+# from app.api import conversations, products, orders
 # app.include_router(conversations.router, prefix="/api/v1/conversations", tags=["对话"])
 # app.include_router(products.router, prefix="/api/v1/products", tags=["选品"])
 # app.include_router(orders.router, prefix="/api/v1/orders", tags=["订单"])

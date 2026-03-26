@@ -2,8 +2,11 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { useUserStore } from '@/stores/user'
+import { Message, Lock, OfficeBuilding } from '@element-plus/icons-vue'
 
 const router = useRouter()
+const userStore = useUserStore()
 const loading = ref(false)
 const formRef = ref()
 
@@ -11,7 +14,7 @@ const form = reactive({
   email: '',
   password: '',
   confirmPassword: '',
-  tenantName: '',
+  tenant_name: '',
 })
 
 const validatePass2 = (rule: any, value: string, callback: Function) => {
@@ -35,7 +38,7 @@ const rules = {
     { required: true, message: '请确认密码', trigger: 'blur' },
     { validator: validatePass2, trigger: 'blur' },
   ],
-  tenantName: [
+  tenant_name: [
     { required: true, message: '请输入企业/店铺名称', trigger: 'blur' },
   ],
 }
@@ -46,11 +49,11 @@ const handleRegister = async () => {
   
   loading.value = true
   try {
-    // TODO: 调用注册API
+    await userStore.register(form.email, form.password, form.tenant_name)
     ElMessage.success('注册成功')
-    router.push('/login')
+    router.push('/')
   } catch (error) {
-    ElMessage.error('注册失败')
+    // 错误已在拦截器处理
   } finally {
     loading.value = false
   }
@@ -71,9 +74,9 @@ const handleRegister = async () => {
         :rules="rules"
         size="large"
       >
-        <el-form-item prop="tenantName">
+        <el-form-item prop="tenant_name">
           <el-input
-            v-model="form.tenantName"
+            v-model="form.tenant_name"
             placeholder="企业/店铺名称"
             :prefix-icon="OfficeBuilding"
           />
