@@ -77,7 +77,7 @@ async def root():
 
 
 # 注册API路由
-from app.api import auth, users, accounts, conversations, products, orders, purchases
+from app.api import auth, users, accounts, conversations, products, orders, purchases, logistics, publish
 
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["认证"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["用户"])
@@ -86,6 +86,8 @@ app.include_router(conversations.router, prefix="/api/v1/conversations", tags=["
 app.include_router(products.router, prefix="/api/v1/products", tags=["选品"])
 app.include_router(orders.router, prefix="/api/v1/orders", tags=["订单"])
 app.include_router(purchases.router, prefix="/api/v1/purchases", tags=["采购"])
+app.include_router(logistics.router, prefix="/api/v1/logistics", tags=["物流"])
+app.include_router(publish.router, prefix="/api/v1/publish", tags=["发布"])
 
 
 # ========== 启动时初始化 ==========

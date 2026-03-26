@@ -196,6 +196,52 @@
         </el-button>
       </template>
     </el-dialog>
+
+    <!-- 发布到闲鱼对话框 -->
+    <el-dialog v-model="showPublishDialog" title="发布到闲鱼" width="500px">
+      <el-form :model="publishForm" label-width="100px" v-if="currentProduct">
+        <el-form-item label="商品">
+          <div class="publish-product-preview">
+            <el-image :src="currentProduct.main_image" class="preview-img" />
+            <div class="preview-info">
+              <div class="title">{{ currentProduct.title }}</div>
+              <div class="price">成本: ¥{{ currentProduct.cost_price }} / 售价: ¥{{ currentProduct.sale_price }}</div>
+            </div>
+          </div>
+        </el-form-item>
+        
+        <el-form-item label="发布账号" required>
+          <el-select v-model="publishForm.account_id" placeholder="选择闲鱼账号" style="width: 100%">
+            <el-option
+              v-for="acc in accounts"
+              :key="acc.id"
+              :label="acc.name"
+              :value="acc.id"
+            />
+          </el-select>
+        </el-form-item>
+        
+        <el-form-item label="售价">
+          <el-input-number v-model="publishForm.sale_price" :precision="2" :min="0" style="width: 100%" />
+        </el-form-item>
+      </el-form>
+      
+      <el-alert
+        title="发布说明"
+        type="info"
+        description="系统将自动打开发布页面，您需要手动完成图片上传和最终确认。"
+        show-icon
+        :closable="false"
+        style="margin-top: 15px;"
+      />
+      
+      <template #footer>
+        <el-button @click="showPublishDialog = false">取消</el-button>
+        <el-button type="primary" @click="confirmPublish" :loading="publishLoading">
+          开始发布
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -205,6 +251,8 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 import ProductSearchResult from './ProductSearchResult.vue'
 import { searchProducts, getProductList, addToList, deleteProduct as deleteProductApi, getProductStats } from '@/api/product'
+import { publishToXianyu } from '@/api/publish'
+import { getAccountList } from '@/api/account'
 
 interface Product {
   id: string
@@ -277,6 +325,17 @@ const addForm = ref({
   main_image: '',
   detail_url: '',
   description: '',
+})
+
+// 发布对话框
+const showPublishDialog = ref(false)
+const publishLoading = ref(false)
+const currentProduct = ref<Product | null>(null)
+const accounts = ref<{id: string, name: string}[]>([])
+const publishForm = ref({
+  product_id: '',
+  account_id: '',
+  sale_price: 0,
 })
 
 // 计算属性
@@ -374,8 +433,52 @@ const viewDetail = (product: Product) => {
 }
 
 const publishToXianyu = (product: Product) => {
-  // TODO: 调用发布API
-  ElMessage.info('发布功能开发中...')
+  currentProduct.value = product
+  publishForm.value = {
+    product_id: product.id,
+    account_id: '',
+    sale_price: product.sale_price,
+  }
+  fetchAccounts()
+  showPublishDialog.value = true
+}
+
+const fetchAccounts = async () => {
+  try {
+    const res = await getAccountList()
+    accounts.value = res.data.map((a: any) => ({
+      id: a.id,
+      name: a.name,
+    }))
+  } catch (e) {
+    console.error('获取账号失败', e)
+  }
+}
+
+const confirmPublish = async () => {
+  if (!publishForm.value.account_id) {
+    ElMessage.warning('请选择发布账号')
+    return
+  }
+  
+  publishLoading.value = true
+  try {
+    const res = await publishToXianyu({
+      product_id: publishForm.value.product_id,
+      account_id: publishForm.value.account_id,
+      sale_price: publishForm.value.sale_price,
+    })
+    
+    if (res.data.success) {
+      ElMessage.success('发布成功！')
+      showPublishDialog.value = false
+      fetchProducts()
+    } else {
+      ElMessage.error(res.data.error || '发布失败')
+    }
+  } finally {
+    publishLoading.value = false
+  }
 }
 
 // 初始化
@@ -498,6 +601,35 @@ onMounted(() => {
   .profit-preview {
     margin-left: 10px;
     color: #67c23a;
+  }
+
+  .publish-product-preview {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background: #f5f7fa;
+    border-radius: 4px;
+
+    .preview-img {
+      width: 80px;
+      height: 80px;
+      border-radius: 4px;
+    }
+
+    .preview-info {
+      flex: 1;
+
+      .title {
+        font-size: 14px;
+        margin-bottom: 5px;
+      }
+
+      .price {
+        font-size: 12px;
+        color: #909399;
+      }
+    }
   }
 }
 </style>
