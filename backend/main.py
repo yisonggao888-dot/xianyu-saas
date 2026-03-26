@@ -22,12 +22,21 @@ async def lifespan(app: FastAPI):
     # 启动活跃账号
     await init_active_accounts()
     
+    # 启动采购队列
+    from app.services.purchase_queue import get_purchase_queue
+    queue = get_purchase_queue()
+    await queue.start()
+    logger.info("Purchase queue started")
+    
     yield
     
     # 关闭时
     from app.services.account_manager import get_account_manager
     manager = get_account_manager()
     await manager.stop_all()
+    
+    # 停止采购队列
+    await queue.stop()
     
     await close_db()
     logger.info("Database connection closed")
@@ -68,7 +77,7 @@ async def root():
 
 
 # 注册API路由
-from app.api import auth, users, accounts, conversations, products, orders
+from app.api import auth, users, accounts, conversations, products, orders, purchases
 
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["认证"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["用户"])
@@ -76,6 +85,7 @@ app.include_router(accounts.router, prefix="/api/v1/accounts", tags=["闲鱼账�
 app.include_router(conversations.router, prefix="/api/v1/conversations", tags=["对话"])
 app.include_router(products.router, prefix="/api/v1/products", tags=["选品"])
 app.include_router(orders.router, prefix="/api/v1/orders", tags=["订单"])
+app.include_router(purchases.router, prefix="/api/v1/purchases", tags=["采购"])
 
 
 # ========== 启动时初始化 ==========

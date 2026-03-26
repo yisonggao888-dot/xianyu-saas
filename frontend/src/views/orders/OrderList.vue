@@ -175,22 +175,80 @@
     </el-dialog>
 
     <!-- 采购对话框 -->
-    <el-dialog v-model="showPurchase" title="自动采购" width="500px">
-      <div class="purchase-info">
-        <p>订单: {{ currentOrder?.item_title }}</p>
-        <p>闲鱼售价: ¥{{ currentOrder?.sold_price }}</p>
-      </div>
+    <el-dialog v-model="showPurchase" title="自动采购" width="600px">
+      <el-form :model="purchaseForm" label-width="100px" v-if="currentOrder">
+        <el-form-item label="商品">
+          <div class="purchase-product">
+            <div class="title">{{ currentOrder.item_title }}</div>
+            <div class="price">闲鱼售价: ¥{{ currentOrder.sold_price }}</div>
+          </div>
+        </el-form-item>
+        
+        <el-form-item label="采购平台" required>
+          <el-radio-group v-model="purchaseForm.source">
+            <el-radio label="pdd">拼多多</el-radio>
+            <el-radio label="1688">1688</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        
+        <el-form-item label="商品链接" required>
+          <el-input 
+            v-model="purchaseForm.source_url" 
+            placeholder="粘贴拼多多或1688商品链接"
+          />
+        </el-form-item>
+        
+        <el-form-item label="商品ID">
+          <el-input 
+            v-model="purchaseForm.source_id" 
+            placeholder="可选，系统会自动提取"
+          />
+        </el-form-item>
+        
+        <el-form-item label="规格">
+          <el-input 
+            v-model="purchaseForm.sku_spec" 
+            placeholder="如：颜色/尺码等"
+          />
+        </el-form-item>
+        
+        <el-form-item label="数量">
+          <el-input-number v-model="purchaseForm.quantity" :min="1" :max="99" />
+        </el-form-item>
+        
+        <el-divider />
+        
+        <el-form-item label="收货人" required>
+          <el-input v-model="purchaseForm.buyer_name" placeholder="买家姓名" />
+        </el-form-item>
+        
+        <el-form-item label="手机号" required>
+          <el-input v-model="purchaseForm.buyer_phone" placeholder="11位手机号" maxlength="11" />
+        </el-form-item>
+        
+        <el-form-item label="收货地址" required>
+          <el-input 
+            v-model="purchaseForm.buyer_address" 
+            type="textarea" 
+            :rows="2"
+            placeholder="详细收货地址"
+          />
+        </el-form-item>
+      </el-form>
+      
       <el-alert
         title="自动采购说明"
         type="info"
-        description="系统将自动到拼多多/1688下单，需要提前配置好账号和支付方式"
+        description="系统将自动到货源平台下单，下单后需要您在拼多多/1688完成支付。"
         show-icon
         :closable="false"
+        style="margin-top: 15px;"
       />
+      
       <template #footer>
         <el-button @click="showPurchase = false">取消</el-button>
         <el-button type="primary" @click="confirmPurchase" :loading="purchaseLoading">
-          开始采购
+          提交采购任务
         </el-button>
       </template>
     </el-dialog>
@@ -203,6 +261,7 @@ import { ElMessage } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import { getOrderList, getOrderStats, getDailyStats, updateOrderStatus } from '@/api/order'
+import { createPurchase, getPurchaseTask } from '@/api/purchase'
 
 interface Order {
   id: string
@@ -260,6 +319,16 @@ const shipForm = ref({
 // 采购对话框
 const showPurchase = ref(false)
 const purchaseLoading = ref(false)
+const purchaseForm = ref({
+  source: 'pdd',
+  source_id: '',
+  source_url: '',
+  sku_spec: '',
+  quantity: 1,
+  buyer_name: '',
+  buyer_phone: '',
+  buyer_address: '',
+})
 
 // 图表
 const chartRef = ref<HTMLDivElement | null>(null)
@@ -368,19 +437,78 @@ const confirmShip = async () => {
 
 const showPurchaseDialog = (order: Order) => {
   currentOrder.value = order
+  purchaseForm.value = {
+    source: 'pdd',
+    source_id: '',
+    source_url: '',
+    sku_spec: '',
+    quantity: 1,
+    buyer_name: '',
+    buyer_phone: '',
+    buyer_address: '',
+  }
   showPurchase.value = true
 }
 
 const confirmPurchase = async () => {
+  if (!currentOrder.value) return
+  
+  if (!purchaseForm.value.source_url) {
+    ElMessage.warning('请输入商品链接')
+    return
+  }
+  if (!purchaseForm.value.buyer_name || !purchaseForm.value.buyer_phone || !purchaseForm.value.buyer_address) {
+    ElMessage.warning('请填写完整的收货信息')
+    return
+  }
+  
   purchaseLoading.value = true
   try {
-    // TODO: 调用采购API
-    await new Promise(r => setTimeout(r, 1000))
-    ElMessage.success('采购任务已创建')
+    const res = await createPurchase({
+      order_id: currentOrder.value.id,
+      source: purchaseForm.value.source,
+      source_id: purchaseForm.value.source_id,
+      source_url: purchaseForm.value.source_url,
+      sku_spec: purchaseForm.value.sku_spec || undefined,
+      quantity: purchaseForm.value.quantity,
+      buyer_name: purchaseForm.value.buyer_name,
+      buyer_phone: purchaseForm.value.buyer_phone,
+      buyer_address: purchaseForm.value.buyer_address,
+    })
+    
+    ElMessage.success('采购任务已提交')
     showPurchase.value = false
+    
+    // 轮询任务状态
+    pollTaskStatus(res.data.task_id)
   } finally {
     purchaseLoading.value = false
   }
+}
+
+const pollTaskStatus = async (taskId: string) => {
+  const checkStatus = async () => {
+    try {
+      const res = await getPurchaseTask(taskId)
+      const task = res.data
+      
+      if (task.status === 'success') {
+        ElMessage.success(`采购成功！货源订单号: ${task.result?.order_id}`)
+        fetchData() // 刷新数据
+        return
+      } else if (task.status === 'failed') {
+        ElMessage.error(`采购失败: ${task.error_msg}`)
+        return
+      }
+      
+      // 继续轮询
+      setTimeout(checkStatus, 3000)
+    } catch (e) {
+      console.error('轮询失败', e)
+    }
+  }
+  
+  checkStatus()
 }
 
 const initChart = () => {
@@ -568,11 +696,19 @@ onUnmounted(() => {
     }
   }
 
-  .purchase-info {
-    margin-bottom: 20px;
+  .purchase-product {
+    padding: 10px;
+    background: #f5f7fa;
+    border-radius: 4px;
 
-    p {
-      margin: 10px 0;
+    .title {
+      font-size: 14px;
+      margin-bottom: 5px;
+    }
+
+    .price {
+      color: #f56c6c;
+      font-weight: bold;
     }
   }
 }
