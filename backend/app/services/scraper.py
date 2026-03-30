@@ -111,9 +111,14 @@ class PDDScraper:
 
 
 class Ali1688Scraper:
-    """1688爬虫"""
+    """1688爬虫 - 支持演示模式和RPA真实抓取"""
     
-    def __init__(self):
+    def __init__(self, use_rpa: bool = False):
+        """
+        Args:
+            use_rpa: 是否使用 Playwright RPA 真实抓取（默认False使用演示数据）
+        """
+        self.use_rpa = use_rpa
         self.client = httpx.AsyncClient(
             headers={
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
@@ -122,6 +127,15 @@ class Ali1688Scraper:
             },
             timeout=30.0
         )
+        self._rpa_scraper = None
+    
+    async def _get_rpa_scraper(self):
+        """懒加载RPA爬虫"""
+        if self._rpa_scraper is None:
+            from app.services.ali1688_rpa import Ali1688RpaScraper
+            self._rpa_scraper = Ali1688RpaScraper()
+            await self._rpa_scraper.init_browser(headless=True)
+        return self._rpa_scraper
     
     def _generate_demo_data(self, keyword: str) -> List[ProductItem]:
         """生成1688演示数据"""
@@ -168,11 +182,30 @@ class Ali1688Scraper:
         min_price: Optional[int] = None,
         max_price: Optional[int] = None,
     ) -> List[ProductItem]:
-        """搜索商品（演示模式）"""
+        """搜索商品（支持RPA真实抓取或演示模式）"""
         keyword = str(keyword).strip()
-        logger.info(f"1688搜索: {keyword}")
+        logger.info(f"1688搜索: {keyword}, RPA模式={self.use_rpa}")
         
-        # 返回演示数据
+        # 如果启用RPA，使用真实抓取
+        if self.use_rpa:
+            try:
+                scraper = await self._get_rpa_scraper()
+                products = await scraper.search(
+                    keyword=keyword,
+                    page_num=page,
+                    sort=sort,
+                    min_price=min_price,
+                    max_price=max_price,
+                )
+                if products:
+                    logger.info(f"1688 RPA抓取成功，返回 {len(products)} 条真实数据")
+                    return products
+                else:
+                    logger.warning("RPA抓取为空，降级到演示数据")
+            except Exception as e:
+                logger.error(f"RPA抓取失败: {e}，降级到演示数据")
+        
+        # 演示数据模式
         products = self._generate_demo_data(keyword)
         
         # 价格筛选
@@ -185,15 +218,25 @@ class Ali1688Scraper:
         return products
     
     async def close(self):
+        if self._rpa_scraper:
+            await self._rpa_scraper.close()
         await self.client.aclose()
 
 
 class ProductScraper:
     """统一商品抓取器"""
     
-    def __init__(self):
+    def __init__(self, use_1688_rpa: bool = None):
+        """
+        Args:
+            use_1688_rpa: 是否启用1688 RPA真实抓取，默认从环境变量读取
+        """
+        import os
+        if use_1688_rpa is None:
+            use_1688_rpa = os.getenv('USE_1688_RPA', 'false').lower() == 'true'
+        
         self.pdd_scraper = PDDScraper()
-        self.ali1688_scraper = Ali1688Scraper()
+        self.ali1688_scraper = Ali1688Scraper(use_rpa=use_1688_rpa)
     
     async def search_all(
         self,
