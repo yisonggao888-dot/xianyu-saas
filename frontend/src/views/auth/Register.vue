@@ -17,7 +17,7 @@ const form = reactive({
   tenant_name: '',
 })
 
-const validatePass2 = (rule: any, value: string, callback: Function) => {
+const validatePass2 = (_rule: any, value: string, callback: Function) => {
   if (value !== form.password) {
     callback(new Error('两次输入密码不一致'))
   } else {

@@ -405,7 +405,7 @@ const timeAgo = (dateStr: string) => {
   return `${Math.floor(diff / 86400)}天前`
 }
 
-const viewDetail = (order: Order) => {
+const viewDetail = (_order: Order) => {
   ElMessage.info('详情功能开发中...')
 }
 

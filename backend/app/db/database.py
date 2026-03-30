@@ -50,9 +50,12 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 async def init_db():
     """初始化数据库表"""
-    from app.models.models import Base
+    from app.models.models import Base as ModelsBase
+    from app.models.product_models import Base as ProductModelsBase
+    
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(ModelsBase.metadata.create_all)
+        await conn.run_sync(ProductModelsBase.metadata.create_all)
 
 
 async def close_db():

@@ -25,7 +25,7 @@ const recentConversations = ref([
   { id: 4, buyer: '学生党', message: '学生有优惠吗？', time: '1小时前', item: 'iPad Air 5' },
 ])
 
-const goTo = (path: string) => {
+const goTo = (_path: string) => {
   // TODO: 路由跳转
 }
 </script>
@@ -94,7 +94,7 @@ const goTo = (path: string) => {
             <el-table-column prop="message" label="最新消息" />
             <el-table-column prop="time" label="时间" width="120" />
             <el-table-column label="操作" width="100">
-              <template #default="{ row }">
+              <template #default="">
                 <el-button type="primary" size="small">回复</el-button>
               </template>
             </el-table-column>

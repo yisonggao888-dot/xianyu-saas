@@ -1,0 +1,12 @@
+{
+  "watch": ["src", "index.html", "vite.config.ts", "tsconfig.json"],
+  "ext": "vue,ts,tsx,js,json,html",
+  "ignore": ["src/**/*.spec.ts", "node_modules", "dist"],
+  "exec": "vite --host",
+  "restartable": "rs",
+  "env": {
+    "NODE_ENV": "development"
+  },
+  "stdout": true,
+  "stderr": true
+}

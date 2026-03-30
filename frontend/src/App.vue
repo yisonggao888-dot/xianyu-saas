@@ -1,11 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
-
-const route = useRoute()
-const isAuthPage = computed(() => {
-  return route.path === '/login' || route.path === '/register'
-})
+// App root component
 </script>
 
 <template>

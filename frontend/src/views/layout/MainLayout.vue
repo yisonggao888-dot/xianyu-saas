@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { UserFilled } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()

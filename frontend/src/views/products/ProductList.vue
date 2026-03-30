@@ -99,7 +99,7 @@
           <template #default="{ row }">
             <el-button-group>
               <el-button size="small" @click="viewDetail(row)">详情</el-button>
-              <el-button size="small" type="primary" @click="publishToXianyu(row)">
+              <el-button size="small" type="primary" @click="handlePublishToXianyu(row)">
                 发布
               </el-button>
               <el-button size="small" type="danger" @click="deleteProduct(row.id)">
@@ -251,8 +251,8 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 import ProductSearchResult from './ProductSearchResult.vue'
 import { searchProducts, getProductList, addToList, deleteProduct as deleteProductApi, getProductStats } from '@/api/product'
-import { publishToXianyu } from '@/api/publish'
-import { getAccountList } from '@/api/account'
+import { publishToXianyu as publishToXianyuApi } from '@/api/publish'
+import { accountApi } from '@/api/account'
 
 interface Product {
   id: string
@@ -432,7 +432,7 @@ const viewDetail = (product: Product) => {
   window.open(product.detail_url, '_blank')
 }
 
-const publishToXianyu = (product: Product) => {
+const handlePublishToXianyu = (product: Product) => {
   currentProduct.value = product
   publishForm.value = {
     product_id: product.id,
@@ -445,8 +445,8 @@ const publishToXianyu = (product: Product) => {
 
 const fetchAccounts = async () => {
   try {
-    const res = await getAccountList()
-    accounts.value = res.data.map((a: any) => ({
+    const accountRes = await accountApi.getList()
+    accounts.value = (accountRes as any[]).map((a: any) => ({
       id: a.id,
       name: a.name,
     }))
@@ -463,19 +463,15 @@ const confirmPublish = async () => {
   
   publishLoading.value = true
   try {
-    const res = await publishToXianyu({
+    await publishToXianyuApi({
       product_id: publishForm.value.product_id,
       account_id: publishForm.value.account_id,
       sale_price: publishForm.value.sale_price,
     })
     
-    if (res.data.success) {
-      ElMessage.success('发布成功！')
-      showPublishDialog.value = false
-      fetchProducts()
-    } else {
-      ElMessage.error(res.data.error || '发布失败')
-    }
+    ElMessage.success('发布任务已提交')
+    showPublishDialog.value = false
+    fetchProducts()
   } finally {
     publishLoading.value = false
   }

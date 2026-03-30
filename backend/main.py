@@ -77,13 +77,14 @@ async def root():
 
 
 # 注册API路由
-from app.api import auth, users, accounts, conversations, products, orders, purchases, logistics, publish
+from app.api import auth, users, accounts, conversations, products, orders, purchases, logistics, publish, sourcing
 
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["认证"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["用户"])
 app.include_router(accounts.router, prefix="/api/v1/accounts", tags=["闲鱼账号"])
 app.include_router(conversations.router, prefix="/api/v1/conversations", tags=["对话"])
 app.include_router(products.router, prefix="/api/v1/products", tags=["选品"])
+app.include_router(sourcing.router, prefix="/api/v1/sourcing", tags=["选品中心"])
 app.include_router(orders.router, prefix="/api/v1/orders", tags=["订单"])
 app.include_router(purchases.router, prefix="/api/v1/purchases", tags=["采购"])
 app.include_router(logistics.router, prefix="/api/v1/logistics", tags=["物流"])
